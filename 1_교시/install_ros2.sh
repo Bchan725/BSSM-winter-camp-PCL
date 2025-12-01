@@ -41,3 +41,7 @@ fi
 if ! grep -q "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" ~/.bashrc; then
     echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> ~/.bashrc
 fi
+
+echo "install pcl"
+
+sudo apt install libpcl-dev pcl-tools -y
