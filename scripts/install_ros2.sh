@@ -48,4 +48,6 @@ sudo apt install libpcl-dev pcl-tools -y
 
 sudo apt install build-essential cmake -y
 
+sudo apt install terminator
+
 source ~/.bashrc
