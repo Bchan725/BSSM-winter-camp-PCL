@@ -45,3 +45,5 @@ fi
 echo "install pcl"
 
 sudo apt install libpcl-dev pcl-tools -y
+
+sudo apt install build-essential cmake -y
