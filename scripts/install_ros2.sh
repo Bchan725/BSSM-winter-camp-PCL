@@ -47,8 +47,3 @@ echo "install pcl"
 sudo apt install libpcl-dev pcl-tools -y
 
 sudo apt install build-essential cmake -y
-
-echo "Auto activate ros2" 
-
-echo "source /opt/ros2/humble/setup.bash" >> ~/.bashrc
-source ~/.bashrc
