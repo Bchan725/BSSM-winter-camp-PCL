@@ -1,0 +1,10 @@
+configs:
+  file_path: ./data/nut.ply
+  downsample_radius: 0.005
+  scale_factor: 0.03
+  boundary_alpha: 0.005
+  ransac_max_iterations: 1000
+  ransac_distance_threshold: 0.01
+  normal_k_search: 20
+  square_box_spacing: 0.001
+  up_tf_offset: 0.1
