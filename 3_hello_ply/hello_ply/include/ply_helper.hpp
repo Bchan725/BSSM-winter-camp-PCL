@@ -125,7 +125,7 @@ private:
     // 포인트 클라우드 Publishers
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr original_publisher_;           // 원본 포인트클라우드
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr downsampled_publisher_;        // 다운샘플링 포인트클라우드
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr top_cloud_publisher_;          // 상단 필터링 포인트클라우드
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr offset_z_cloud_publisher_;          // 상단 필터링 포인트클라우드
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr boundary_publisher_;           // 외곽 경계 포인트클라우드
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr plane_publisher_;              // 평면 포인트클라우드
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr center_hole_publisher_;        // 중심 구멍 포인트클라우드

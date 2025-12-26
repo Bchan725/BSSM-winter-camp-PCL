@@ -18,7 +18,7 @@ PlyHelper::PlyHelper() : rclcpp::Node(NODE_NAME) {
                                                                                       1,
                                                                                       publisher_options_);
 
-    top_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(topic_name_ + "_top", 
+    offset_z_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(topic_name_ + "_top", 
                                                                                       1,
                                                                                       publisher_options_);
 
@@ -480,18 +480,19 @@ void PlyHelper::process() {
     // 3. 포인트 클라우드 다운샘플링
     CloudPtr downsampled_cloud;
     downsampling(downsampled_cloud);
+    change_pointcloud_color(downsampled_cloud, 255, 255, 255);
     publishPointCloud(downsampled_cloud, downsampled_publisher_);
 
     // 4. 다운샘플링된 포인트 클라우드에서 Z 축이 0 이상인 포인트만 필터링 ( 노란색 )
-    CloudPtr top_cloud;
-    extract_offset_z(downsampled_cloud, top_cloud, 0.0f);
-    change_pointcloud_color(top_cloud, 255, 255, 0);
-    publishPointCloud(top_cloud, top_cloud_publisher_);
+    CloudPtr offset_z_cloud;
+    extract_offset_z(downsampled_cloud, offset_z_cloud, 0.0f);
+    change_pointcloud_color(offset_z_cloud, 255, 255, 0);
+    publishPointCloud(offset_z_cloud, offset_z_cloud_publisher_);
 
 	// 5. RANSAC으로 위쪽 평면 찾은 후 초록색으로 변경
 	CloudPtr plane_cloud;
     pcl::ModelCoefficients::Ptr plane_coefficients;
-    find_top_plane_ransac(top_cloud, plane_cloud, plane_coefficients);
+    find_top_plane_ransac(offset_z_cloud, plane_cloud, plane_coefficients);
     change_pointcloud_color(plane_cloud, 0, 255, 0);
     publishPointCloud(plane_cloud, plane_publisher_);
 
@@ -523,6 +524,7 @@ void PlyHelper::process() {
 
     // 메시지 준비 (while 루프에서 사용)
     sensor_msgs::msg::PointCloud2 downsampled_msg;
+    sensor_msgs::msg::PointCloud2 offset_z_pcl_msg;
     sensor_msgs::msg::PointCloud2 plane_msg;
     sensor_msgs::msg::PointCloud2 boundary_msg;
     sensor_msgs::msg::PointCloud2 center_hole_msg;
@@ -530,7 +532,10 @@ void PlyHelper::process() {
     
     pcl::toROSMsg<CloudT>(*downsampled_cloud, downsampled_msg);
     downsampled_msg.header.frame_id = "map";
-    
+
+    pcl::toROSMsg<CloudT>(*offset_z_cloud, offset_z_pcl_msg);
+    offset_z_pcl_msg.header.frame_id = "map";
+
     pcl::toROSMsg<CloudT>(*plane_cloud, plane_msg);
     plane_msg.header.frame_id = "map";
     
@@ -553,6 +558,9 @@ void PlyHelper::process() {
             
             downsampled_msg.header.stamp = now;
             downsampled_publisher_->publish(downsampled_msg);
+
+            offset_z_pcl_msg.header.stamp = now;
+            offset_z_cloud_publisher_->publish(offset_z_pcl_msg);
             
             plane_msg.header.stamp = now;
             plane_publisher_->publish(plane_msg);
