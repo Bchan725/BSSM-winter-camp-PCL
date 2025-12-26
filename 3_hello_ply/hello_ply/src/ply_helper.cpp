@@ -130,46 +130,46 @@ void PlyHelper::downsampling(CloudPtr& output_cloud) {
 }
 
 void PlyHelper::extract_boundary_cloud(
-	const CloudPtr& input_cloud,
-	CloudPtr& output_cloud,
-	std::vector<pcl::Vertices>& output_polygons
+    const CloudPtr& input_cloud,
+    CloudPtr& output_cloud,
+    std::vector<pcl::Vertices>& output_polygons
 )
 {   
-	if (!input_cloud || input_cloud->points.empty()) {
-		LOG_ERROR("Input cloud is empty for boundary extraction.");
-		output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
-		output_polygons.clear();
-		return;
-	}
+    output_polygons.clear();
 
-	if (input_cloud->points.size() < 3) {
-		LOG_ERROR("Input cloud has less than 3 points. Cannot extract boundary.");
-		output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
-		output_polygons.clear();
-		return;
-	}
+    if (!output_cloud) {
+        output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
+    } else {
+        output_cloud->clear();
+    }
 
-	LOG_INFO("Extracting boundary from " << input_cloud->points.size() << " points");
+    // 2. 입력 클라우드 유효성 검사
+    if (!input_cloud || input_cloud->points.empty()) {
+        LOG_WARN("Input cloud is empty. Skipping boundary extraction.");
+        return;
+    }
 
-	output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
-	output_polygons.clear();
+    pcl::ConcaveHull<CloudT> concave_hull;
 
-	pcl::ConcaveHull<CloudT> concave_hull;
-	concave_hull.setInputCloud(input_cloud);  
-	concave_hull.setAlpha(boundary_alpha_);
+    concave_hull.setInputCloud(input_cloud);
+    concave_hull.setAlpha(boundary_alpha_); 
+    concave_hull.setDimension(2);
+    
+    try {
+        LOG_INFO("Extracting boundary from " << input_cloud->size() << " points...");
+        
+        // 직접 output_cloud에 결과를 채워넣습니다.
+        concave_hull.reconstruct(*output_cloud, output_polygons);
 
-	concave_hull.reconstruct(*output_cloud, output_polygons);
-
-	if (output_cloud && !output_cloud->points.empty() && !output_polygons.empty()) {
-		LOG_INFO("Boundary extraction successful with alpha=" << boundary_alpha_ 
-				<< ": " << output_cloud->points.size() << " points, " << output_polygons.size() << " polygons");
-	} else {
-		LOG_ERROR("Boundary extraction failed with alpha=" << boundary_alpha_ 
-				<< " (points: " << (output_cloud ? output_cloud->points.size() : 0) 
-				<< ", polygons: " << output_polygons.size() << ")");
-		output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
-		output_polygons.clear();
-	}
+        if (output_cloud->empty()) {
+            LOG_WARN("Boundary extraction resulted in an empty cloud (check alpha value).");
+        } else {
+            LOG_INFO("Boundary extraction successful: " << output_cloud->size() << " points.");
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR("PCL ConcaveHull error: " << e.what());
+    }
 }
 
 void PlyHelper::find_top_plane_ransac(
@@ -235,47 +235,36 @@ void PlyHelper::get_center_hole(
     CloudPtr& output_cloud
 ) {
     if (!boundary_cloud || boundary_cloud->points.empty() || polygons.empty()) {
-        LOG_ERROR("Input boundary cloud or polygons is empty.");
         output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
         return;
     }
 
-    if (polygons.size() < 2) {
-        LOG_WARN("Not enough polygons to find center hole. Using first polygon.");
-        if (polygons.empty()) {
-            output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
-            return;
-        }
-    }
-
     std::vector<std::pair<int, size_t>> polygon_sizes;
     for (size_t i = 0; i < polygons.size(); i++) {
-        polygon_sizes.emplace_back(i, polygons[i].vertices.size());
+        polygon_sizes.emplace_back(static_cast<int>(i), polygons[i].vertices.size());
     }
 
     std::sort(polygon_sizes.begin(), polygon_sizes.end(),
             [](const auto& a, const auto& b) {
-                return a.second < b.second;
+                return a.second > b.second;
             });
 
-    int smallest_idx = polygon_sizes[0].first;
-    const auto& target_vertices = polygons[smallest_idx].vertices;
-
-    LOG_INFO("Found " << polygons.size() << " polygons. Selecting smallest polygon (index " 
-            << smallest_idx << ", size: " << target_vertices.size() << " vertices)");
+    int target_idx_in_sorted = (polygon_sizes.size() >= 2) ? 1 : 0;
+    int final_polygon_idx = polygon_sizes[target_idx_in_sorted].first;
+    const auto& target_vertices = polygons[final_polygon_idx].vertices;
 
     output_cloud = std::make_shared<pcl::PointCloud<CloudT>>();
+    output_cloud->points.reserve(target_vertices.size());
+
     for (int idx : target_vertices) {
         if (idx >= 0 && static_cast<size_t>(idx) < boundary_cloud->points.size()) {
             output_cloud->points.push_back(boundary_cloud->points[idx]);
         }
     }
 
-    output_cloud->width = output_cloud->points.size();
+    output_cloud->width = static_cast<uint32_t>(output_cloud->points.size());
     output_cloud->height = 1;
     output_cloud->is_dense = true;
-
-    LOG_INFO("Center hole extracted: " << output_cloud->points.size() << " points");
 }
 
 void PlyHelper::create_center_square_box(

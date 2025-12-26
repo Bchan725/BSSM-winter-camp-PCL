@@ -2,7 +2,7 @@ configs:
   file_path: /home/bssm/BSSM-winter-camp-PCL/3_hello_ply/data/nut.ply
   downsample_radius: 0.005
   scale_factor: 0.03
-  boundary_alpha: 0.005
+  boundary_alpha: 0.01
   ransac_max_iterations: 1000
   ransac_distance_threshold: 0.01
   normal_k_search: 20
